@@ -47,6 +47,20 @@ test("accepts item commands without a space and merges aliases", () => {
   );
 });
 
+test("accepts no-slash order and change formats", () => {
+  const chatId = "group-1";
+
+  send(chatId, "u1", "王小明", "/開單");
+  assert.equal(send(chatId, "u1", "王小明", "點牛肉麵"), null);
+  assert.equal(send(chatId, "u2", "陳美美", "點牛肉麵"), null);
+  assert.equal(send(chatId, "u2", "陳美美", "改肉燥飯"), null);
+
+  assert.equal(
+    send(chatId, "u1", "王小明", "/統計"),
+    ["今日點餐統計", "", "牛肉麵：1", "肉燥飯：1"].join("\n")
+  );
+});
+
 test("detail groups people by item", () => {
   const chatId = "group-1";
 
