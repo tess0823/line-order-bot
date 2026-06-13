@@ -10,9 +10,9 @@ test("records one order per person and summarizes equal items", () => {
   const chatId = "group-1";
 
   assert.match(send(chatId, "u1", "王小明", "/開單"), /已開單/);
-  assert.match(send(chatId, "u1", "王小明", "/點 牛肉麵"), /牛肉麵/);
-  assert.match(send(chatId, "u2", "陳美美", "/點 牛肉麵"), /牛肉麵/);
-  assert.match(send(chatId, "u3", "Ken", "/點 雞腿便當"), /雞腿便當/);
+  assert.equal(send(chatId, "u1", "王小明", "/點 牛肉麵"), null);
+  assert.equal(send(chatId, "u2", "陳美美", "/點 牛肉麵"), null);
+  assert.equal(send(chatId, "u3", "Ken", "/點 雞腿便當"), null);
 
   assert.equal(
     send(chatId, "u1", "王小明", "/統計"),
@@ -30,6 +30,20 @@ test("changing an order replaces the previous item", () => {
   assert.equal(
     send(chatId, "u1", "王小明", "/統計"),
     ["今日點餐統計", "", "雞腿便當：1"].join("\n")
+  );
+});
+
+test("accepts item commands without a space and merges aliases", () => {
+  const chatId = "group-1";
+
+  send(chatId, "u1", "王小明", "/開單");
+  send(chatId, "u1", "王小明", "/點無骨雞腿排便當");
+  send(chatId, "u2", "陳美美", "/點 雞腿排");
+  send(chatId, "u3", "Ken", "/點雞腿排便當");
+
+  assert.equal(
+    send(chatId, "u1", "王小明", "/統計"),
+    ["今日點餐統計", "", "無骨雞腿排便當：3"].join("\n")
   );
 });
 
