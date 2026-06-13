@@ -24,6 +24,14 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
+    if (request.method === "GET" && request.url === "/ping") {
+      response.writeHead(200, {
+        "Content-Type": "text/plain"
+      });
+      response.end("ok");
+      return;
+    }
+
     if (request.method !== "POST" || request.url !== "/webhook") {
       sendJson(response, 404, { ok: false, message: "Not found" });
       return;
