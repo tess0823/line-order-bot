@@ -97,3 +97,110 @@ export async function clearSession(chatId) {
     session.orders.clear();
     return;
   }
+
+  await query("BEGIN");
+  try {
+    await query(
+      `INSERT INTO order_sessions (chat_id, is_open, is_closed, updated_at)
+       VALUES ($1, FALSE, FALSE, NOW())
+       ON CONFLICT (chat_id)
+       DO UPDATE SET is_open = FALSE, is_closed = FALSE, updated_at = NOW()`,
+      [chatId]
+    );
+    await query("DELETE FROM orders WHERE chat_id = $1", [chatId]);
+    await query("COMMIT");
+  } catch (error) {
+    await query("ROLLBACK");
+    throw error;
+  }
+}
+
+export async function closeSession(chatId) {
+  if (!pool) {
+    const session = getMemorySession(chatId);
+    session.isOpen = false;
+    session.isClosed = true;
+    return;
+  }
+
+  await query(
+    `INSERT INTO order_sessions (chat_id, is_open, is_closed, updated_at)
+     VALUES ($1, FALSE, TRUE, NOW())
+     ON CONFLICT (chat_id)
+     DO UPDATE SET is_open = FALSE, is_closed = TRUE, updated_at = NOW()`,
+    [chatId]
+  );
+}
+
+export async function setOrder({ chatId, userKey, userId, name, item }) {
+  if (!pool) {
+    const session = getMemorySession(chatId);
+    session.orders.set(userKey, { userId, name, item });
+    return;
+  }
+
+  await query(
+    `INSERT INTO orders (chat_id, user_key, user_id, name, item, updated_at)
+     VALUES ($1, $2, $3, $4, $5, NOW())
+     ON CONFLICT (chat_id, user_key)
+     DO UPDATE SET user_id = EXCLUDED.user_id,
+                   name = EXCLUDED.name,
+                   item = EXCLUDED.item,
+                   updated_at = NOW()`,
+    [chatId, userKey, userId, name, item]
+  );
+}
+
+export async function deleteOrder({ chatId, userKey }) {
+  if (!pool) {
+    const session = getMemorySession(chatId);
+    session.orders.delete(userKey);
+    return;
+  }
+
+  await query("DELETE FROM orders WHERE chat_id = $1 AND user_key = $2", [
+    chatId,
+    userKey
+  ]);
+}
+
+export async function listOrders(chatId) {
+  if (!pool) {
+    return [...getMemorySession(chatId).orders.values()];
+  }
+
+  const result = await query(
+    `SELECT user_id AS "userId", name, item
+     FROM orders
+     WHERE chat_id = $1
+     ORDER BY item, name`,
+    [chatId]
+  );
+
+  return result.rows;
+}
+
+export function resetMemoryStorageForTests() {
+  memorySessions.clear();
+}
+
+async function query(text, params) {
+  const client = await pool.connect();
+  try {
+    return await client.query(text, params);
+  } finally {
+    client.release();
+  }
+}
+
+function getMemorySession(chatId) {
+  if (!memorySessions.has(chatId)) {
+    memorySessions.set(chatId, {
+      isOpen: false,
+      isClosed: false,
+      orders: new Map()
+    });
+  }
+
+  return memorySessions.get(chatId);
+}
