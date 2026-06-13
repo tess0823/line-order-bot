@@ -1,6 +1,7 @@
-﻿import http from "node:http";
+import http from "node:http";
 import { handleCommand } from "./orderBook.js";
 import { getProfile, replyText, verifyLineSignature } from "./line.js";
+import { initStorage } from "./storage.js";
 
 const port = Number(process.env.PORT || 3000);
 const channelSecret = process.env.LINE_CHANNEL_SECRET;
@@ -9,6 +10,8 @@ const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 if (!channelSecret || !channelAccessToken) {
   console.warn("LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN are required for LINE webhooks.");
 }
+
+await initStorage();
 
 const server = http.createServer(async (request, response) => {
   try {
@@ -62,7 +65,7 @@ async function processEvent(event) {
   }
 
   const profile = await getProfile({ source, channelAccessToken });
-  const reply = handleCommand({
+  const reply = await handleCommand({
     chatId,
     userId,
     text: event.message.text,
