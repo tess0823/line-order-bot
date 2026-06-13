@@ -1,0 +1,13 @@
+﻿{
+  "name": "line-order-bot",
+  "version": "1.0.0",
+  "description": "A simple temporary LINE group ordering bot.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
