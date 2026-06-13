@@ -1,22 +1,15 @@
-﻿const sessions = new Map();
+    }
 
-function getSession(chatId) {
-  if (!sessions.has(chatId)) {
-    sessions.set(chatId, {
-      isOpen: false,
-      orders: new Map()
-    });
+    if (trimmed.startsWith(`${command} `)) {
+      return trimmed.slice(command.length + 1);
+    }
+
+    if (trimmed.startsWith(command)) {
+      return trimmed.slice(command.length);
+    }
   }
 
-  return sessions.get(chatId);
-}
-
-function normalizeItem(value) {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function displayName(profile, fallbackUserId) {
-  return profile?.displayName || fallbackUserId || "未知使用者";
+  return null;
 }
 
 export function handleCommand({ chatId, userId, text, profile }) {
@@ -45,12 +38,13 @@ export function handleCommand({ chatId, userId, text, profile }) {
     return "已清空這一輪點餐。";
   }
 
-  if (trimmed.startsWith("/點 ") || trimmed.startsWith("/改 ")) {
+  const orderedItem = parseItemCommand(trimmed, ["/點", "/改"]);
+  if (orderedItem !== null) {
     if (!session.isOpen) {
       return "目前還沒開單，請先輸入 /開單。";
     }
 
-    const item = normalizeItem(trimmed.slice(3));
+    const item = canonicalItem(orderedItem);
     if (!item) {
       return "請在指令後面加上餐點，例如：/點 牛肉麵";
     }
@@ -61,16 +55,16 @@ export function handleCommand({ chatId, userId, text, profile }) {
       item
     });
 
-    return `${name} 已記錄：${item}`;
+    return null;
   }
 
   if (trimmed === "/取消") {
     if (!session.orders.has(userId)) {
-      return `${name} 目前沒有點餐紀錄。`;
+      return null;
     }
 
     session.orders.delete(userId);
-    return `${name} 已取消點餐。`;
+    return null;
   }
 
   if (trimmed === "/統計") {
